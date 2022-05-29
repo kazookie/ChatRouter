@@ -1,0 +1,21 @@
+{% include 'partials/header.html' %}
+<style>
+    html {
+        background-color: #AED4FF
+    }
+</style>
+<button type="button" onclick="test()">send message</button>
+<script>
+    SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
+    var recognition = new SpeechRecognition();
+    recognition.continuous = false;
+  
+    recognition.onresult = (event) => {
+        console.log(event.results);
+        var text = event.results[0][0].transcript;
+        axios.post('http://localhost:4532/talk', {text:text});
+    }
+  
+    recognition.start();
+</script>
+{% include 'partials/footer.html' %}

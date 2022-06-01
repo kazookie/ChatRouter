@@ -13,3 +13,7 @@ def read_root(request: Request):
 @router.get("/stt", response_class=HTMLResponse)
 def read_stt(request: Request):
     return templates.TemplateResponse('stt.html', {"request": request})
+
+@router.get("/chat", response_class=HTMLResponse)
+def read_chat(request: Request):
+    return templates.TemplateResponse('chat.html', {"request": request})

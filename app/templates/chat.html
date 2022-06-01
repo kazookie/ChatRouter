@@ -1,0 +1,42 @@
+{% include 'partials/header.html' %}
+
+<div id="message-rendering">
+  <ul>
+    <li v-for="message in messages">
+      [[ message ]]
+    </li>
+  </ul>
+</div>
+
+<script>
+const client = new tmi.Client({
+  channels: [ '' ]
+});
+client.connect().catch(console.error);
+var messages = [];
+var MessageRendering = {
+  data() {
+    return {
+      messages: messages
+    }
+  },
+  delimiters: ['[[', ']]'],
+  mounted() {
+    client.on('message', (channel, tags, message, self)  => {
+      messages.push(`${tags['display-name']}: ${message}`);
+      params = {
+        text: `${tags['display-name']}: ${message}`,
+        voice: 1
+      }
+      this.$forceUpdate()
+      var element = document.documentElement;
+      var bottom = element.scrollHeight - element.clientHeight;
+      window.scroll(0, bottom);
+        // axios.get("http://localhost:50080/Talk", {params:params})
+    });
+  }
+}
+Vue.createApp(MessageRendering).mount('#message-rendering');
+</script>
+
+{% include 'partials/footer.html' %}

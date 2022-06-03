@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+import json
 
 router = APIRouter()
 
@@ -17,3 +18,7 @@ def read_stt(request: Request):
 @router.get("/chat", response_class=HTMLResponse)
 def read_chat(request: Request):
     return templates.TemplateResponse('chat.html', {"request": request})
+
+@router.get("/setting", response_class=HTMLResponse)
+def read_chat(request: Request):
+    return templates.TemplateResponse('setting.html', {"request": request})

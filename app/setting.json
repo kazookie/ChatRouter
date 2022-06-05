@@ -7,8 +7,11 @@
     "SimpleVoiceroid2Proxy": {
         "url": "http://localhost:4532/talk"
     },
-    "VOICEBOX": {
+    "VOICEVOX": {
         "url": "http://localhost:50021/"
+    },
+    "COEIROINK": {
+        "url": "http://localhost:50031/"
     },
     "twitch": {
         "channels": []

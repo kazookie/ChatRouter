@@ -1,42 +1,124 @@
 {% include 'partials/header.html' %}
 
-<div id="message-rendering">
+<button type="button" onclick="irc_read()">START</button>
+<label class="checkbox">
+  <input type="checkbox" id="send_voicevox">
+  VOICEVOX
+</label>
+<label class="checkbox">
+  <input type="checkbox" id="send_coeiroink">
+  COEIROINK
+</label>
+<label class="checkbox">
+  <input type="checkbox" id="send_bouyomichan">
+  BouyomiChan
+</label>
+
+<div id="app">
   <ul>
-    <li v-for="message in messages">
+    <li v-if="messages" v-for="message in messages">
       [[ message ]]
     </li>
   </ul>
 </div>
 
 <script>
-const client = new tmi.Client({
-  channels: [ '' ]
-});
-client.connect().catch(console.error);
+const send_voicevox = document.getElementById('send_voicevox');
+const send_coeiroink = document.getElementById('send_coeiroink');
+const send_bouyomichan = document.getElementById('send_bouyomichan');
+var setting = null;
 var messages = [];
-var MessageRendering = {
+
+var App = {
   data() {
     return {
-      messages: messages
+      messages: messages,
     }
   },
   delimiters: ['[[', ']]'],
-  mounted() {
-    client.on('message', (channel, tags, message, self)  => {
-      messages.push(`${tags['display-name']}: ${message}`);
-      params = {
-        text: `${tags['display-name']}: ${message}`,
-        voice: 1
-      }
-      this.$forceUpdate()
-      var element = document.documentElement;
-      var bottom = element.scrollHeight - element.clientHeight;
-      window.scroll(0, bottom);
-        // axios.get("http://localhost:50080/Talk", {params:params})
-    });
-  }
 }
-Vue.createApp(MessageRendering).mount('#message-rendering');
+const app = Vue.createApp(App).mount('#app');
+
+axios.get("/api/setting")
+  .then(response => {
+    setting = response.data;
+  });
+
+function irc_read() {
+  var client = new tmi.Client({
+    channels: setting.twitch.channels
+  });
+  client.connect().catch(console.error);
+  client.on('message', (channel, tags, message, self)  => {
+    msg = `${tags['display-name']}: ${message}`
+    messages.push(msg);
+    app.$forceUpdate();
+    if (send_voicevox.checked) {
+      voicevox_speak(msg);
+    }
+    if (send_coeiroink.checked) {
+      coeiroink_speak(msg);
+    }
+    if (send_bouyomichan.checked) {
+      bouyomicyan_speak(msg);
+    }
+  });
+}
+
+function scroll_end() {
+  var element = document.documentElement;
+  var bottom = element.scrollHeight - element.clientHeight;
+  window.scroll(0, bottom);
+}
+
+function bouyomicyan_speak(text) {
+  params = {
+    text: text,
+    voice: 1
+  }
+  axios.get("http://localhost:50080/Talk", {params:params});
+}
+
+function voicevox_speak(text) {
+  let base_url = setting.VOICEVOX.url;
+  let query_url =  base_url + "audio_query";
+  let synthesis_url = base_url + "synthesis";
+  params = {
+    text: text,
+    speaker: 10,
+  }
+  axios.post(query_url, null, {params:params})
+    .then(response => {
+      axios.post(synthesis_url, response.data, {params:{speaker:10}, responseType : 'blob'})
+        .then(response2 => {
+          let blob = new Blob([response2.data], {type : 'audio/wav'});      
+          let audio = new Audio();
+          let audio_url = URL.createObjectURL(blob);
+          audio.src = audio_url;
+          audio.play();
+        });
+  });
+}
+function coeiroink_speak(text) {
+  let base_url = setting.COEIROINK.url;
+  let query_url =  base_url + "audio_query";
+  let synthesis_url = base_url + "synthesis";
+  params = {
+    text: text,
+    speaker: 327965129,
+  }
+  axios.post(query_url, null, {params:params})
+    .then(response => {
+      axios.post(synthesis_url, response.data, {params:{speaker:327965129}, responseType : 'blob'})
+        .then(response2 => {
+          let blob = new Blob([response2.data], {type : 'audio/wav'});      
+          let audio = new Audio();
+          let audio_url = URL.createObjectURL(blob);
+          audio.src = audio_url;
+          audio.play();
+        });
+  });
+}
 </script>
 
 {% include 'partials/footer.html' %}

@@ -1,21 +1,105 @@
 {% include 'partials/header.html' %}
-<style>
-    html {
-        background-color: #AED4FF
-    }
-</style>
-<button type="button" onclick="test()">send message</button>
+<button type="button" onclick="start_stt()">START</button>
+<label class="checkbox">
+  <input type="checkbox" id="send_sv2p" />
+  SimpleVoiceroid2Proxy
+</label>
+<label class="checkbox">
+  <input type="checkbox" id="send_deepl" />
+  DeepL
+</label>
+<label class="checkbox">
+  <input type="checkbox" id="send_obs" />
+  OBS
+</label>
+
+<p id="subtitle"></p>
+<p id="translation"></p> 
+
+
 <script>
-    SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
-    var recognition = new SpeechRecognition();
-    recognition.continuous = false;
-  
-    recognition.onresult = (event) => {
-        console.log(event.results);
-        var text = event.results[0][0].transcript;
-        axios.post('http://localhost:4532/talk', {text:text});
+  var voiceroid_proxy_url = '';
+  var deepl_url = '';
+  var deepl_params = new URLSearchParams();
+  var subtitle = document.getElementById('subtitle');
+  var translation = document.getElementById('translation');
+  var send_sv2p = document.getElementById('send_sv2p');
+  var send_deepl = document.getElementById('send_deepl');
+  var send_obs = document.getElementById('send_obs');
+  var text = '';
+
+  const obs = new OBSWebSocket();
+
+  SpeechRecognition = webkitSpeechRecognition || SpeechRecognition;
+  var recognition = new SpeechRecognition();
+  recognition.continuous = false;
+
+  axios.get("/api/setting")
+    .then(response => {
+      voiceroid_proxy_url = response.data.SimpleVoiceroid2Proxy.url;
+      deepl_url = response.data.DeepL.url;
+      deepl_params.set('target_lang', response.data.DeepL.target_lang);
+      deepl_params.set('auth_key', response.data.DeepL.auth_key);
+    });
+
+  recognition.onresult = (event) => {
+    text = event.results[0][0].transcript;
+    subtitle.textContent = text;
+
+    if (send_sv2p.checked) {
+      axios.post('http://localhost:4532/talk', {text:text});
     }
+
+    if (send_deepl.checked) {
+      deepl_params.set('text', text);
+      axios.post(deepl_url, deepl_params)
+        .then(response => {
+          let translation_text =  response.data.translations[0].text;
+          translation.textContent = translation_text
+          if (send_obs.checked) { change_obs_text(text + "\n" + translation_text); }
+        });
+    }
+    else{
+      if (send_obs.checked) { change_obs_text(text); }
+    }
+
+    window.setTimeout(clear_text, 10000, text);
+  }
   
+  recognition.onend = () => { recognition.start(); }
+
+  /**
+   * Start speech recognition
+   */
+  function start_stt() {
     recognition.start();
+    if (send_obs.checked) { obs.connect('ws://127.0.0.1:4444'); }
+  }
+
+  /**
+   * Clear the text,
+   * if the global text and current text are same
+   * 
+   * @param {string} message
+   */
+  function clear_text(message) {
+    if(message == text) {
+      subtitle.textContent = '';
+      translation.textContent = '';
+      if(send_obs.checked) { change_obs_text(''); }
+    }
+  }
+
+  /**
+   * Change obs text
+   * 
+   * @param {string} message
+   */
+  function change_obs_text(message) {
+    obs.send('SetTextGDIPlusProperties', {
+      source: "subtitle",
+      text: message
+    });
+  }
 </script>
 {% include 'partials/footer.html' %}
